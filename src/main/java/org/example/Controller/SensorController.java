@@ -3,15 +3,13 @@ package org.example.Controller;
 import ConnectESP.ArduinoWebSocketClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonObject;
-import org.example.Model.Sensor;
-import org.example.Model.SensorData;
-import org.example.Model.Station;
-import org.example.Model.WebSocketHandler;
+import org.example.Model.*;
 import org.example.Repository.SensorRepository;
 import org.example.Repository.StationRepository;
 import org.example.Service.SensorService;
 import org.example.Service.StationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,7 +21,9 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/sensors")
@@ -37,7 +37,6 @@ public class SensorController {
     @Autowired
     private StationRepository stationRepository;
     private final SensorRepository sensorRepository;
-
 
     private String ESP32_URL ;
     public SensorController(SensorRepository sensorRepository, StationRepository stationRepository) {
@@ -101,20 +100,22 @@ public class SensorController {
 
     // API để cập nhật Sensor theo Station ID
     @PutMapping("/update/{stationId}")
-    public String updateSensor(@PathVariable int stationId,@RequestBody SensorData request) {
+    public ResponseEntity<Map<String, Object>> updateSensor(@PathVariable int stationId, @RequestBody SensorData request) {
+        Map<String, Object> response = new HashMap<>();
         try {
-
             // Tìm Station theo stationId
             Station station = stationRepository.findById(stationId);
-            ESP32_URL = "http://" + station.getUri()+":"+80 + "/update";;
-            System.out.println("ESP32_URL: "+ESP32_URL);
+            ESP32_URL = "http://" + station.getUri() + ":" + 80 + "/update";
+            System.out.println("ESP32_URL: " + ESP32_URL);
+
             // Tìm sensor theo stationId
             List<Sensor> sensors = sensorRepository.findByStationId(Long.parseLong(String.valueOf(stationId)));
 
             if (sensors == null || sensors.isEmpty()) {
-                return "Sensor for the given stationId not found.";
-            }
-            else {
+                response.put("status", "error");
+                response.put("message", "Sensor for the given stationId not found.");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            } else {
                 Sensor sensor = sensors.get(0);
                 // Cập nhật các trường dữ liệu của sensor với dữ liệu mới từ FE
                 sensor.setFanSpeed(request.getFanSpeed());
@@ -126,6 +127,7 @@ public class SensorController {
                 sensor.setMediumHumidity(request.getMediumHumidity());
 
                 sensorRepository.save(sensor);
+
                 // Tạo JSON chỉ với các giá trị cần thiết
                 JsonObject jsonToSend = new JsonObject();
                 jsonToSend.addProperty("fanSpeed", sensor.getFanSpeed());
@@ -140,7 +142,6 @@ public class SensorController {
                 ArduinoWebSocketClient client = new ArduinoWebSocketClient(new URI(serverUri));
 
                 // Kết nối đến WebSocket
-                // Kết nối đến WebSocket
                 client.connectBlocking(); // Đảm bảo kết nối được thiết lập
 
                 // Gửi thông điệp tới ESP32 chỉ khi đã kết nối thành công
@@ -149,16 +150,30 @@ public class SensorController {
                     System.out.println("Message sent to ESP32 to send: " + sensorDataJson);
                 } else {
                     System.out.println("WebSocket not open. Cannot send message.");
+                    response.put("status", "error");
+                    response.put("message", "WebSocket not open. Cannot send message.");
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
                 }
 
-
-                return "done";
+                // Thành công
+                response.put("status", "success");
+                response.put("message", "Update successful.");
+                return ResponseEntity.ok(response);
             }
-
         } catch (Exception e) {
             e.printStackTrace();
-            return "Failed to update sensor.";
+            response.put("status", "error");
+            response.put("message", "Failed to update sensor: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
+    }
+
+    @PostMapping("/sendSensorData")
+    public void sendSensorData(@RequestBody User sensorData) {
+        Long assignedStationId = sensorData.getAssignedStationId(); // Lấy assignedStationId từ dữ liệu
+
+        // Gửi dữ liệu đến tất cả client đang lắng nghe với assignedStationId
+//        messagingTemplate.convertAndSend("/topic/sensorData/" + assignedStationId, sensorData);
     }
 
 }

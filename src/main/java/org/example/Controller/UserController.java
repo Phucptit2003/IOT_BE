@@ -7,7 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -44,12 +46,23 @@ public class UserController {
         return ResponseEntity.ok().build();
     }
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody User user) {
-        boolean isValidUser = userService.validateUser(user.getUsername(), user.getPassword());
-        if (isValidUser) {
-            return ResponseEntity.ok("Login successful");
+    public ResponseEntity<Map<String, Object>> login(@RequestBody User user) {
+        User isValidUser = userService.validateUser(user.getUsername(), user.getPassword());
+
+        if (isValidUser != null) {
+            int role = isValidUser.getLevel();
+            Long assignedStationId = isValidUser.getAssignedStationId(); // Get assigned station ID
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Login successful");
+            response.put("role", role);
+            response.put("assignedStationId", assignedStationId); // Include it in the response
+
+            return ResponseEntity.ok(response);
         } else {
-            return ResponseEntity.status(401).body("Invalid username or password");
+            return ResponseEntity.status(401).body(Map.of("message", "Invalid username or password"));
         }
     }
+
+
 }

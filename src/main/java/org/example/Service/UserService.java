@@ -75,7 +75,8 @@ public class UserService {
                             SensorData sensorData = objectMapper.readValue(message, SensorData.class);
                             // Gửi dữ liệu tới FE qua WebSocket
                             if (webSocketHandler != null) {
-                                webSocketHandler.broadcastMessage(message);
+//                                webSocketHandler.broadcastMessage(message);
+                                webSocketHandler.sendToStation(stationId,message);
                                 Station station = stationRepository.findById(stationId);
                                 List<Sensor> sensors = sensorRepository.findByStationId(Long.parseLong(String.valueOf(stationId)));
                                 Sensor newSensor ;
@@ -122,26 +123,12 @@ public class UserService {
                                     }
                                 }
 
-//                                // Gán dữ liệu từ ESP32 vào sensor
-//                                newSensor.setTemperature(sensorData.getTemperature());
-//                                newSensor.setHumidity(sensorData.getHumidity());
-//                                newSensor.setFanSpeed(sensorData.getFanSpeed());
-//                                newSensor.setLedState(sensorData.getLedState());
-//                                newSensor.setBuzzerState(sensorData.getBuzzerState());
-//
-//                                // Bạn có thể thêm logic xử lý thêm nếu cần, ví dụ: tính toán trạng thái của sensor
-//                                if (sensorData.getFanSpeed() > 0) {
-//                                    newSensor.setStatus("active");
-//                                } else {
-//                                    newSensor.setStatus("idle");
-//                                }
-
-                                // Lưu sensor vào DB
                                 sensorRepository.save(newSensor);
 
                                 // Gửi dữ liệu tới FE qua WebSocket (nếu cần)
                                 if (webSocketHandler != null) {
-                                    webSocketHandler.broadcastMessage(message);
+                                    //webSocketHandler.broadcastMessage(message);
+                                    webSocketHandler.sendToStation(stationId,message);
                                 } else {
                                     System.out.println("webSocketHandler is null");
                                 }
@@ -183,8 +170,13 @@ public class UserService {
 //        }
 //    }
 
-    public boolean validateUser(String username, String password) {
+    public User validateUser(String username, String password) {
+        System.out.println(username+" : "+password);
         User user = userRepository.findByUsername(username);
-        return user != null && user.getPassword().equals(password);
+        System.out.println("user: "+user.getUsername()+" pasword:"+user.getPassword());
+        if(user!=null && user.getPassword().equals(password)){
+            return user;
+        }
+        else return null;
     }
 }

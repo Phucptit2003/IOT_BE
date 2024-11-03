@@ -7,38 +7,53 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 @Component
 public class WebSocketHandler extends TextWebSocketHandler {
 
-    // Tập hợp để lưu giữ các session của các client đang kết nối
-    private Set<WebSocketSession> sessions = new HashSet<>();
+    // Map để lưu các WebSocket session của mỗi trạm theo stationId
+    private final Map<Integer, Set<WebSocketSession>> stationSessions = new HashMap<>();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        sessions.add(session);  // Khi client kết nối, thêm session vào set
-    }
+        Integer stationId = (Integer) session.getAttributes().get("stationId");
 
-    @Override
-    public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        // Xử lý tin nhắn từ client (nếu cần)
+        if (stationId != null) {
+            stationSessions.computeIfAbsent(stationId, k -> new HashSet<>()).add(session);
+        } else {
+            session.close();
+        }
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-        sessions.remove(session);  // Khi client ngắt kết nối, loại bỏ session khỏi set
+        Integer stationId = (Integer) session.getAttributes().get("stationId");
+        if (stationId != null) {
+            Set<WebSocketSession> sessions = stationSessions.get(stationId);
+            if (sessions != null) {
+                sessions.remove(session);
+                if (sessions.isEmpty()) {
+                    stationSessions.remove(stationId);
+                }
+            }
+        }
     }
 
-    // Phương thức để broadcast tin nhắn đến tất cả các client
-    public void broadcastMessage(String message) {
-        for (WebSocketSession session : sessions) {
-            if (session.isOpen()) {
-                try {
-                    session.sendMessage(new TextMessage(message));
-                } catch (IOException e) {
-                    e.printStackTrace();
+    // Phương thức để gửi dữ liệu từ ESP đến đúng trạm dựa trên stationId
+    public void sendToStation(int stationId, String message) {
+        Set<WebSocketSession> sessions = stationSessions.get(stationId);
+        if (sessions != null) {
+            for (WebSocketSession session : sessions) {
+                if (session.isOpen()) {
+                    try {
+                        session.sendMessage(new TextMessage(message));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }
