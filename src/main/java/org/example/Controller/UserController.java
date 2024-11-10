@@ -1,6 +1,7 @@
 package org.example.Controller;
 
 import org.example.Model.AsignStation;
+import org.example.Model.Station;
 import org.example.Model.User;
 import org.example.Service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +42,14 @@ public class UserController {
     public ResponseEntity<Void> assignStation_User(@PathVariable Long id, @RequestBody Long stationId) {
         userService.assignStation(id, stationId);
         return ResponseEntity.ok().build();
+    }
+    @GetMapping("/deleteUser/{id}")
+    public void  deleteUser(@PathVariable int id) {
+         userService.deleteUser(Long.parseLong(String.valueOf(id)));
+    }
+    @PostMapping("/update/{id}")
+    public User updateStation(@PathVariable int id, @RequestBody User user) {
+        return userService.updateUser(Long.parseLong(String.valueOf(id)), user);
     }
 
     @PutMapping("/assign-sensor-station")

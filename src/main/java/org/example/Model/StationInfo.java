@@ -23,7 +23,7 @@ public class StationInfo {
     }
 
     public StationInfo() {
-        
+
     }
 
     // Getters and Setters

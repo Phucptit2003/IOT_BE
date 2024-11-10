@@ -58,7 +58,7 @@ public class UserService {
         String serverUri = "ws://" + uri + ":" + port;
         System.out.println("Server URI: " + serverUri);
 
-        if (station != null) {
+        if (station != null  && !uri.equals("0")) {
             station.setUri(uri);
             station.setPort(port);
             stationRepository.save(station);
@@ -178,5 +178,19 @@ public class UserService {
             return user;
         }
         else return null;
+    }
+    public void deleteUser(Long id) {
+        userRepository.deleteById(id);
+    }
+    public User updateUser(Long id,User user) {
+
+        User existUser = userRepository.findById(id).orElse(null);
+        existUser.setUsername(user.getUsername());
+        existUser.setPassword(user.getPassword());
+        existUser.setLevel(user.getLevel());
+        existUser.setAssignedStationId(user.getAssignedStationId());
+            return userRepository.save(existUser);
+
+
     }
 }
