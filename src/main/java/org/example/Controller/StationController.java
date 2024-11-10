@@ -1,5 +1,6 @@
 package org.example.Controller;
 
+import org.example.Model.StationInfo;
 import org.example.Service.StationService;
 import org.example.Model.Station;
 import org.springframework.web.bind.annotation.*;
@@ -16,7 +17,7 @@ public class StationController {
     }
 
     @GetMapping
-    public List<Station> getAllStations() {
+    public List<StationInfo> getAllStations() {
         return stationService.getAllStations();
     }
 

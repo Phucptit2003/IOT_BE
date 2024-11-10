@@ -26,6 +26,9 @@ public class UserController {
 
     @GetMapping
     public List<User> getAllUsers() {
+        for(User user : userService.getAllUsers()) {
+            System.out.println(user.getUsername());
+        }
         return userService.getAllUsers();
     }
 

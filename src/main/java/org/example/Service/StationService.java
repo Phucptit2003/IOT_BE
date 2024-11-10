@@ -3,6 +3,8 @@ package org.example.Service;
 import ConnectESP.ArduinoWebSocketClient;
 import org.example.Controller.ControlRequest;
 import org.example.Model.Station;
+import org.example.Model.StationInfo;
+import org.example.Repository.GetStationInfoRepo;
 import org.example.Repository.StationRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;
@@ -14,16 +16,17 @@ import java.util.List;
 @Service
 public class StationService {
     private final StationRepository stationRepository;
-
-    public StationService(StationRepository stationRepository) {
+    private final GetStationInfoRepo getStationInfoRepo;
+    public StationService(StationRepository stationRepository, GetStationInfoRepo getStationInfoRepo) {
         this.stationRepository = stationRepository;
+        this.getStationInfoRepo = getStationInfoRepo;
     }
 
     /**
      * Lấy danh sách tất cả các trạm
      */
-    public List<Station> getAllStations() {
-        return stationRepository.findAll();
+    public List<StationInfo> getAllStations() {
+        return getStationInfoRepo.findAllStationsInfo();
     }
 
     /**
