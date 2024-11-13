@@ -8,6 +8,7 @@ import org.example.Repository.SensorRepository;
 import org.example.Repository.StationRepository;
 import org.example.Service.SensorService;
 import org.example.Service.StationService;
+import org.example.Service.WebSocketService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,11 +38,12 @@ public class SensorController {
     @Autowired
     private StationRepository stationRepository;
     private final SensorRepository sensorRepository;
-
+    private final WebSocketService webSocketService;
     private String ESP32_URL ;
-    public SensorController(SensorRepository sensorRepository, StationRepository stationRepository) {
+    public SensorController(SensorRepository sensorRepository, StationRepository stationRepository, WebSocketService webSocketService) {
         this.sensorRepository = sensorRepository;
         this.stationRepository = stationRepository;
+        this.webSocketService = webSocketService;
     }
     // Lấy tất cả cảm biến
     @GetMapping
@@ -125,7 +127,7 @@ public class SensorController {
                 sensor.setTargetHumidity(request.getTargetHumidity());
                 sensor.setMediumTemperature(request.getMediumTemperature());
                 sensor.setMediumHumidity(request.getMediumHumidity());
-
+                System.out.println("ledSate " + sensor.getLedState()+" buzzerState " + sensor.getBuzzerState());
                 sensorRepository.save(sensor);
 
                 // Tạo JSON chỉ với các giá trị cần thiết
@@ -139,26 +141,39 @@ public class SensorController {
                 jsonToSend.addProperty("mediumHumidity", sensor.getMediumHumidity());
                 String sensorDataJson = jsonToSend.toString();
                 String serverUri = "ws://" + station.getUri() + ":" + station.getPort();
-                ArduinoWebSocketClient client = new ArduinoWebSocketClient(new URI(serverUri));
+                //ArduinoWebSocketClient client = new ArduinoWebSocketClient(new URI(serverUri));
+                webSocketService.sendMessage(serverUri, sensorDataJson);  // Gửi bất đồng bộ
 
-                // Kết nối đến WebSocket
-                client.connectBlocking(); // Đảm bảo kết nối được thiết lập
-
-                // Gửi thông điệp tới ESP32 chỉ khi đã kết nối thành công
-                if (client.isOpen()) {
-                    client.send(sensorDataJson);
-                    System.out.println("Message sent to ESP32 to send: " + sensorDataJson);
-                } else {
-                    System.out.println("WebSocket not open. Cannot send message.");
-                    response.put("status", "error");
-                    response.put("message", "WebSocket not open. Cannot send message.");
-                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-                }
-
-                // Thành công
                 response.put("status", "success");
-                response.put("message", "Update successful.");
+                response.put("message", "Update request submitted.");
                 return ResponseEntity.ok(response);
+                // Kết nối đến WebSocket
+//                client.connectBlocking(); // Đảm bảo kết nối được thiết lập
+//
+//                // Gửi thông điệp tới ESP32 chỉ khi đã kết nối thành công
+//                if (client.isOpen()) {
+//                    client.send(sensorDataJson);
+//                    System.out.println("Message sent to ESP32 to send: " + sensorDataJson);
+//                } else {
+//                    client.connectBlocking();
+//                    if (client.isOpen()) {
+//                        client.send(sensorDataJson);
+//                        System.out.println("Message sent to ESP32 to send: " + sensorDataJson);
+//                    }
+//                    else{
+//                        System.err.println("WebSocket not open. Cannot send message.");
+//                        response.put("status", "error");
+//                        response.put("message", "WebSocket not open. Cannot send message.");
+//                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+//                    }
+//                }
+//
+//
+//                // Thành công
+//                response.put("status", "success");
+//                response.put("message", "Update successful.");
+//
+//                return ResponseEntity.ok(response);
             }
         } catch (Exception e) {
             e.printStackTrace();
